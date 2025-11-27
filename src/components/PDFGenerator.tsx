@@ -1,9 +1,13 @@
-import { Button, Typography, styled } from '@mui/material';
+import { Button, Typography, styled, ToggleButtonGroup, ToggleButton } from '@mui/material';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 import { MathWorksheet } from './MathWorksheet';
 import { NumberDecomposition } from './NumberDecomposition';
-import { useRef } from 'react';
+import { AdvancedMathWorksheet } from './AdvancedMathWorksheet';
+import { AdvancedNumberDecomposition } from './AdvancedNumberDecomposition';
+import { EqualityComparison } from './EqualityComparison';
+import { SequenceContinuation } from './SequenceContinuation';
+import { useRef, useState, useEffect } from 'react';
 
 const PageTitle = styled(Typography)({
   textAlign: 'center',
@@ -19,7 +23,7 @@ const PageTitle = styled(Typography)({
 });
 
 const Section = styled('div')({
-  marginBottom: '12px',
+  marginBottom: '8px',
   width: '100%'
 });
 
@@ -69,8 +73,55 @@ const PrintButton = styled(Button)({
   }
 });
 
+const LevelSelector = styled(ToggleButtonGroup)({
+  marginBottom: '15px',
+  fontFamily: 'Rubik',
+  direction: 'rtl',
+  '& .MuiToggleButton-root': {
+    fontFamily: 'Rubik',
+    fontSize: '16px',
+    padding: '8px 16px',
+    '@media (max-width: 600px)': {
+      fontSize: '14px',
+      padding: '6px 12px'
+    }
+  }
+});
+
+const SectionTitle = styled(Typography)({
+  fontSize: '18px',
+  fontWeight: 'bold',
+  marginBottom: '6px',
+  direction: 'rtl',
+  fontFamily: 'Rubik',
+  '@media (max-width: 600px)': {
+    fontSize: '16px',
+    marginBottom: '4px'
+  }
+});
+
+type Level = 'basic' | 'advanced';
+
+const STORAGE_KEY = 'targilim-level';
+
 export const PDFGenerator = () => {
   const worksheetRef = useRef<HTMLDivElement>(null);
+  const [level, setLevel] = useState<Level>(() => {
+    // Initialize from localStorage or default to 'basic'
+    const savedLevel = localStorage.getItem(STORAGE_KEY);
+    return (savedLevel === 'basic' || savedLevel === 'advanced') ? savedLevel : 'basic';
+  });
+
+  useEffect(() => {
+    // Save to localStorage whenever level changes
+    localStorage.setItem(STORAGE_KEY, level);
+  }, [level]);
+
+  const handleLevelChange = (_event: React.MouseEvent<HTMLElement>, newLevel: Level | null) => {
+    if (newLevel !== null) {
+      setLevel(newLevel);
+    }
+  };
 
   const generatePDF = async () => {
     if (!worksheetRef.current) return;
@@ -135,6 +186,19 @@ export const PDFGenerator = () => {
 
   return (
     <Container>
+      <LevelSelector
+        value={level}
+        exclusive
+        onChange={handleLevelChange}
+        aria-label="level selection"
+      >
+        <ToggleButton value="basic" aria-label="basic level">
+          רמה בסיסית
+        </ToggleButton>
+        <ToggleButton value="advanced" aria-label="advanced level">
+          רמה מתקדמת
+        </ToggleButton>
+      </LevelSelector>
       <PrintButton 
         variant="contained" 
         color="primary" 
@@ -144,12 +208,35 @@ export const PDFGenerator = () => {
       </PrintButton>
       <WorksheetContainer ref={worksheetRef}>
         <PageTitle>דף עבודה בחשבון</PageTitle>
-        <Section>
-          <MathWorksheet exerciseCount={21} maxResult={20} />
-        </Section>
-        <Section>
-          <NumberDecomposition exerciseCount={6} maxSum={20} />
-        </Section>
+        {level === 'basic' ? (
+          <>
+            <Section>
+              <MathWorksheet exerciseCount={21} maxResult={20} />
+            </Section>
+            <Section>
+              <NumberDecomposition exerciseCount={6} maxSum={20} />
+            </Section>
+          </>
+        ) : (
+          <>
+            <Section>
+              <SectionTitle>תרגילי חשבון</SectionTitle>
+              <AdvancedMathWorksheet exerciseCount={18} />
+            </Section>
+            <Section>
+              <SectionTitle>פירוק מספרים</SectionTitle>
+              <AdvancedNumberDecomposition exerciseCount={4} />
+            </Section>
+            <Section>
+              <SectionTitle>השוואת מספרים</SectionTitle>
+              <EqualityComparison exerciseCount={6} />
+            </Section>
+            <Section>
+              <SectionTitle>המשך סדרה</SectionTitle>
+              <SequenceContinuation exerciseCount={6} />
+            </Section>
+          </>
+        )}
       </WorksheetContainer>
     </Container>
   );
